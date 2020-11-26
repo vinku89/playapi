@@ -1,0 +1,56 @@
+#!groovy
+
+/**
+ * Feature Declarative Pipeline with Shared library.
+ *
+ * 1. Static Analysis and Quality Gate check
+ */
+@Library('vplayed-cicd') _ 
+
+pipeline {
+    agent any
+    stages {
+        stage('Static Analysis') {
+            steps {
+               withSonarQubeEnv('vplayed_sonarqube') {
+                 runSonarScanner sonarProperties: "sonar-project.properties"
+                 sleep 60
+                }
+            }
+        }
+        stage('Quality Gate') {
+            steps {
+                script {
+                    def qg = waitForQualityGate()
+                    if (qg.status != 'OK') {
+                        // Send email and set the build status as failed
+
+                        // Set Build Status
+                        currentBuild.result = "FAILED"
+
+                        // Read the build properties for developers email, and email template repo link
+                        def buildProps = readProperties file: 'build.properties'
+
+                        // Send email to developers and ops team
+                        // Send failure email with Sonarqube link attached
+                        sendQGFailedEmail to: "${buildProps['build.email.dev']}, ${buildProps['build.email.ops']}"
+
+                        //Set build status as failed with a message
+                        error "Pipeline aborted due to quality gate failure: ${qg.status}"
+                    }
+                }
+            }
+        }
+    }
+
+    // The options directive is for configuration that applies to the whole job.
+    options {
+        // We'd like to make sure we only keep 20 builds at a time, so
+        // we don't fill up the storage!
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+
+        // And we'd really like to be sure that this build doesn't hang forever, so
+        // let's time it out after an hour.
+        timeout(time: 60, unit: 'MINUTES')
+    }
+}

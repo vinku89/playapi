@@ -1,0 +1,2 @@
++ cp -R ./. ./.. ./.env ./.env.example ./.git ./.gitattributes ./.gitignore /var/www/vplayed/contus_vplay_api/
+cp: will not create hard link '/var/www/vplayed/contus_vplay_api/VPLAY_PIPELINE_API' to directory '/var/www/vplayed/contus_vplay_api/.'

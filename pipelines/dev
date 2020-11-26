@@ -1,0 +1,126 @@
+#!groovy
+
+/**
+ * Feature Declarative Pipeline with Shared library.
+ *
+ * 1. Static Analysis and Quality Gate check
+ * 2. Deploy in Dev Environment
+ */
+@Library('vplayed-cicd') _
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Preparation') {
+           steps {
+            // Get some code from a GitHub repository
+            git branch: 'develop', credentialsId: 'bitbucket-access', url: 'git@bitbucket.org:Apptha/vplayed-api.git'
+        }
+    }
+        stage('Build') {
+	    agent {
+	       node {
+	           label "Vplayed-Dev"
+	       }
+	   }
+
+        steps {
+                script {
+	            def DB_PASSWORD = 'CsitKcoAi1@'
+	            def MAIL_SENDER_NAME = '"Balaganesh"'
+                sh "echo '\n" +
+                "APP_ENV=develop\n" +
+                "APP_KEY=base64:6/uu9HYJh6dTFcY2cHBAoFpIQRuJc0tALiQdUu+rsZs=\n" +
+                "APP_DEBUG=true\n" +
+                "APP_LOG_LEVEL=debug\n" +
+                "APP_URL=http://api.vplayed.dev.contus.us\n" +
+                "DB_HOST=192.168.0.53\n" +
+                "DB_DATABASE=vplayed_dev\n" +
+                "DB_USERNAME=vplayed_dev\n" +
+                "DB_PASSWORD=${DB_PASSWORD}\n" +
+                "\n" +
+                "ENABLE_SSL=false\n" +
+                "MONGODB_HOST=192.168.0.53\n" +
+                "MONGODB_PORT=27017\n" +
+                "MONGODB_DATABASE=vplayed_dev\n" +
+                "MONGODB_USERNAME=root\n" +
+                "MONGODB_PASSWORD=${DB_PASSWORD}\n" +
+                "\n" +
+                "BROADCAST_DRIVER=log\n" +
+                "CACHE_DRIVER=redis\n" +
+                "SESSION_DRIVER=file\n" +
+                "\n" +
+                "JWT_SECRET=l3GIk8O1GMgcIpOsOsVFd3u2KgoMy4bT\n" +
+                "\n" +
+                "BACKEND_API_PREFIX\n" +
+                "LOG_CHANNEL=stack\n" +
+                "\n" +
+                "MAIL_DRIVER=smtp\n" +
+                "MAIL_HOST=email-smtp.us-west-2.amazonaws.com\n" +
+                "MAIL_PORT=587\n" +
+                "MAIL_USERNAME=AKIAJMXVOSKU36XE4NKQ\n" +
+                "MAIL_PASSWORD=AlmLrmzFS8hCaeXGnUmgAX3ZmfVfTXRHob6OcLzZHHEG\n" +
+                "MAIL_ENCRYPTION=tls\n" +
+                "MAIL_SENDER_ADDRESS=balaganesh.g@contus.in\n" +
+                "MAIL_SENDER_NAME=${MAIL_SENDER_NAME}\n" +
+                "\n" +
+                "WEB_SITE_URL=http://vplayed.dev.contus.us/\n" +
+                "WEB_SITE_AUDIO_URL=https://vplayed.audio.dev.contus.us/\n" +
+                "\n" +
+                "AWS_VERSION=latest\n" +
+                "AWS_SECRET=b07JnHIiA7t8QCPHzRViQ1o7gOZINRZUX+C3MG4W\n" +
+                "AWS_REGION=ap-southeast-1\n" +
+                "AWS_BUCKET=vplayed-uat\n" +
+                "AWS_KEY=AKIAJRDHZDNJZG4Q6IOQ\n" +
+                "AWS_BUCKET_URL=https://d1gqth3loa1oxy.cloudfront.net/\n" +
+                "AWS_PIPELINE_ID=1543915792383-zac3gr\n" +
+                "TRANSCODE_LIMIT=60\n" +
+                "VIDEO_TRANSCODE_TYPE=AWS\n" +
+                "\n" +
+                "SCOUT_DRIVER=elastic\n" +
+                "SCOUT_ELASTIC_HOST=localhost:9200\n" +
+                "\n" +
+                "WOWZA_API_PRODUCTION_URL=https://api-sandbox.cloud.wowza.com/api/v1\n" +
+                "WOWZA_CLOUD_API_KEY=9MXoUQz5HuQAKkdQGg6QlqYuFWEHgtDpsrXSTjZCFMovPIbxesnVGi9hNQso3621\n" +
+                "WOWZA_CLOUD_ACCESS_KEY=DyF3HGyo3JgZJBJe6EXLROkiy85tc250aFIkbB1u4Z5zkqKEKNQDKWOXfQFz3126\n" +
+                "FCM_KEY=AAAAkNJCt0g:APA91bGnKDJNUOJtIdL0Opj2A8FRiIsc0KWWCjnpfx7_xpAd-ihUpnHq9Y8EArZr6Rrw0fv8uQtEuY2HJet4KceARlZNazfFaYcNM4nMg7zjQpxnkQiF1EpojYe0IIBy7lO6en7Dj_cf\n" +
+                "REDIS_HOST=192.168.0.53\n" +
+                "REDIS_PASSWORD=null\n" +
+                "REDIS_PORT=6379\n" +
+                "REDIS_DB=0\n" +
+                "GLOBAL_CACHE_TAG=vplayed_cache\n" +
+                "GLOBAL_CACHE_TIME=120\n" +
+                "ELASTICSEARCH_INDEX_PREFIX=dev_\n" +
+                "DOWNLOAD_REFERER=https://vplayed.dev.contus.us\n" +
+                "L5_SWAGGER_CONST_HOST=api.vplayed.dev.contus.us\n" +
+                "' >.env" 
+        sh 'composer install'
+        sh 'chmod -R 777 storage bootstrap public'
+        sh 'php artisan migrate --force'
+        sh 'php artisan db:seed --force'
+	    sh 'rm -f package-lock.json'
+	    sh 'npm install'
+        sh 'php artisan vendor:publish --all'
+        sh 'cp vendor/babenkoivan/scout-elasticsearch-driver/config/scout_elastic.php config/scout_elastic.php'
+        sh 'npm run dev'
+        sh 'chmod -R 777 storage bootstrap public'
+        sh 'rsync -a ./ /var/www/vplayed/html/api-dev/'
+        sh 'php artisan l5-swagger:generate'
+        }
+    }   
+  } 
+
+}
+
+    // The options directive is for configuration that applies to the whole job.
+    options {
+        // We'd like to make sure we only keep 20 builds at a time, so
+        // we don't fill up the storage!
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+
+        // And we'd really like to be sure that this build doesn't hang forever, so
+        // let's time it out after an hour.
+        timeout(time: 60, unit: 'MINUTES')
+    }
+}

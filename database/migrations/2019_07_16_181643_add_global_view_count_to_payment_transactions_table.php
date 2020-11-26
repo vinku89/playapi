@@ -1,0 +1,34 @@
+<?php
+
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+class AddGlobalViewCountToPaymentTransactionsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::table('payment_transactions', function (Blueprint $table) {
+            $table->integer('view_count')->default(0)->after('response');
+            $table->integer('global_view_count')->default(0)->after('response');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::table('payment_transactions', function (Blueprint $table) {
+            $table->dropColumn('view_count');
+            $table->dropColumn('global_view_count');
+        });
+    }
+}
